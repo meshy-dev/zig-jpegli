@@ -90,12 +90,18 @@ pub fn build(b: *std.Build) void {
     // Install only the jpegli library
     b.installArtifact(jpegli);
 
-    // Install libjpeg-compatible headers
+    // Install libjpeg-compatible headers (for libjpeg API compatibility)
     // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jpegli.cmake#L72-L77
     jpegli.installHeader(b.path("jconfig.h"), "jconfig.h");
     jpegli.installHeader(libjpeg_turbo.path("jpeglib.h"), "jpeglib.h");
     jpegli.installHeader(libjpeg_turbo.path("jmorecfg.h"), "jmorecfg.h");
     jpegli.installHeader(libjpeg_turbo.path("jerror.h"), "jerror.h");
+
+    // Install jpegli-specific headers (for direct jpegli API usage)
+    jpegli.installHeader(upstream.path("lib/jpegli/common.h"), "jpegli/common.h");
+    jpegli.installHeader(upstream.path("lib/jpegli/decode.h"), "jpegli/decode.h");
+    jpegli.installHeader(upstream.path("lib/jpegli/encode.h"), "jpegli/encode.h");
+    jpegli.installHeader(upstream.path("lib/jpegli/types.h"), "jpegli/types.h");
 
     // ============== CLI tool internal libraries (not installed) ==============
 
