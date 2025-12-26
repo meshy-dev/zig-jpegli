@@ -1,34 +1,7 @@
 //! Zig build for Google's jpegli - a JPEG encoder/decoder library
 //!
 //! This build file is derived from the upstream CMake build system.
-//! When updating to newer versions, check the following files for source list changes:
-//!
-//! jpegli sources (JPEGXL_INTERNAL_JPEGLI_SOURCES):
-//!   https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jxl_lists.cmake#L133-L180
-//!
-//! jpegli CMake build definition:
-//!   https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jpegli.cmake
-//!
-//! extras sources (JPEGXL_INTERNAL_EXTRAS_SOURCES):
-//!   https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jxl_lists.cmake#L96-L131
-//!
-//! codec sources (JPEGXL_INTERNAL_CODEC_* in jxl_lists.cmake):
-//!   https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jxl_lists.cmake#L182-L230
-//!
-//! threads sources (JPEGXL_INTERNAL_THREADS_SOURCES):
-//!   https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jxl_lists.cmake#L240-L245
-//!
-//! CMS sources (JPEGXL_INTERNAL_CMS_SOURCES):
-//!   https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jxl_lists.cmake#L79-L89
-//!
-//! tools CMake build definition:
-//!   https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/tools/CMakeLists.txt
-//!
-//! highway sources (HWY_SOURCES in CMakeLists.txt):
-//!   https://github.com/google/highway/blob/457c891775a7397bdb0376bb1031e6e027af1c48/CMakeLists.txt#L356-L367
-//!
-//! skcms sources (bundled, zig fetch doesn't support googlesource):
-//!   https://skia.googlesource.com/skcms/+/bf2d52b98a420c59d991ced59fef8b4243b7dc13/BUILD.bazel#11
+//! When updating to newer versions, check the links in comments for source list changes:
 
 const std = @import("std");
 
