@@ -15,73 +15,80 @@ pub fn build(b: *std.Build) void {
     const libjpeg_turbo = b.dependency("libjpeg_turbo", .{});
     const png_dep = b.dependency("libpng", .{ .target = target, .optimize = optimize });
 
-    // ============== Highway SIMD library ==============
+    // ============== Internal libraries (not installed, used transitively) ==============
+
+    // Highway SIMD library (internal)
     // Source: https://github.com/google/highway/blob/457c891775a7397bdb0376bb1031e6e027af1c48/CMakeLists.txt#L356-L367
-    const hwy = b.addLibrary(.{
-        .name = "hwy",
-        .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
+    const hwy_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
     });
-    hwy.linkLibCpp();
-    hwy.addIncludePath(highway.path(""));
-    hwy.addCSourceFiles(.{
+    hwy_mod.addIncludePath(highway.path(""));
+    hwy_mod.addCSourceFiles(.{
         .root = highway.path(""),
         .files = hwy_sources,
         .flags = cxx_flags,
     });
-    hwy.root_module.addCMacro("HWY_STATIC_DEFINE", "1");
+    hwy_mod.addCMacro("HWY_STATIC_DEFINE", "1");
 
-    // ============== skcms color management library ==============
+    const hwy = b.addLibrary(.{
+        .name = "hwy",
+        .linkage = .static,
+        .root_module = hwy_mod,
+    });
+
+    // skcms color management library (internal)
     // Vendored via git subtree from: https://skia.googlesource.com/skcms/+/bf2d52b98a420c59d991ced59fef8b4243b7dc13
     // Source list: https://skia.googlesource.com/skcms/+/bf2d52b98a420c59d991ced59fef8b4243b7dc13/BUILD.bazel#11
-    const skcms = b.addLibrary(.{
-        .name = "skcms",
-        .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
+    const skcms_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
     });
-    skcms.linkLibCpp();
-    skcms.addIncludePath(b.path("skcms"));
-    skcms.addCSourceFiles(.{
+    skcms_mod.addIncludePath(b.path("skcms"));
+    skcms_mod.addCSourceFiles(.{
         .root = b.path("skcms"),
         .files = skcms_sources,
         .flags = cxx_flags,
     });
 
-    // ============== Jpegli static library ==============
-    // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jpegli.cmake
-    const jpegli = b.addLibrary(.{
-        .name = "jpegli",
+    const skcms = b.addLibrary(.{
+        .name = "skcms",
         .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
+        .root_module = skcms_mod,
     });
-    jpegli.linkLibCpp();
-    jpegli.addIncludePath(upstream.path(""));
-    jpegli.addIncludePath(highway.path(""));
-    jpegli.addIncludePath(libjpeg_turbo.path(""));
-    jpegli.addIncludePath(b.path("")); // for jconfig.h
-    jpegli.root_module.addCMacro("HWY_STATIC_DEFINE", "1");
-    jpegli.addCSourceFiles(.{
+
+    // ============== Jpegli static library (the only public artifact) ==============
+    // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jpegli.cmake
+    const jpegli_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    jpegli_mod.addIncludePath(upstream.path(""));
+    jpegli_mod.addIncludePath(highway.path(""));
+    jpegli_mod.addIncludePath(libjpeg_turbo.path(""));
+    jpegli_mod.addIncludePath(b.path("")); // for jconfig.h
+    jpegli_mod.addCMacro("HWY_STATIC_DEFINE", "1");
+    jpegli_mod.addCSourceFiles(.{
         .root = upstream.path("lib"),
         .files = jpegli_sources,
         .flags = cxx_flags,
     });
-    jpegli.linkLibrary(hwy);
+    jpegli_mod.linkLibrary(hwy);
 
-    // Install library artifacts
+    const jpegli = b.addLibrary(.{
+        .name = "jpegli",
+        .linkage = .static,
+        .root_module = jpegli_mod,
+    });
+
+    // Install only the jpegli library
     b.installArtifact(jpegli);
-    b.installArtifact(hwy);
 
     // Install libjpeg-compatible headers
     // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jpegli.cmake#L72-L77
@@ -90,180 +97,194 @@ pub fn build(b: *std.Build) void {
     jpegli.installHeader(libjpeg_turbo.path("jmorecfg.h"), "jmorecfg.h");
     jpegli.installHeader(libjpeg_turbo.path("jerror.h"), "jerror.h");
 
-    // ============== Extras library for CLI tools ==============
+    // ============== CLI tool internal libraries (not installed) ==============
+
+    // Extras library for CLI tools (internal)
     // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jxl_lists.cmake#L96-L131
-    const jxl_extras = b.addLibrary(.{
-        .name = "jxl_extras",
-        .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
+    const jxl_extras_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
     });
-    jxl_extras.linkLibCpp();
-    jxl_extras.addIncludePath(upstream.path(""));
-    jxl_extras.addIncludePath(highway.path(""));
-    jxl_extras.addIncludePath(libjpeg_turbo.path(""));
-    jxl_extras.addIncludePath(b.path(""));
-    jxl_extras.addIncludePath(b.path("skcms"));
-    jxl_extras.addIncludePath(png_dep.path(""));
-    jxl_extras.root_module.addCMacro("HWY_STATIC_DEFINE", "1");
-    jxl_extras.root_module.addCMacro("JPEGXL_ENABLE_APNG", "1");
+    jxl_extras_mod.addIncludePath(upstream.path(""));
+    jxl_extras_mod.addIncludePath(highway.path(""));
+    jxl_extras_mod.addIncludePath(libjpeg_turbo.path(""));
+    jxl_extras_mod.addIncludePath(b.path(""));
+    jxl_extras_mod.addIncludePath(b.path("skcms"));
+    jxl_extras_mod.addIncludePath(png_dep.path(""));
+    jxl_extras_mod.addCMacro("HWY_STATIC_DEFINE", "1");
+    jxl_extras_mod.addCMacro("JPEGXL_ENABLE_APNG", "1");
     // Disable optional codecs that require external libraries (giflib, openexr, libjpeg)
-    jxl_extras.root_module.addCMacro("JPEGXL_ENABLE_EXR", "0");
-    jxl_extras.root_module.addCMacro("JPEGXL_ENABLE_GIF", "0");
-    jxl_extras.root_module.addCMacro("JPEGXL_ENABLE_JPEG", "0");
-    jxl_extras.root_module.addCMacro("JPEGXL_ENABLE_JPEGLI", "1");
-    jxl_extras.root_module.addCMacro("JPEGXL_ENABLE_SKCMS", "1");
-    jxl_extras.addCSourceFiles(.{
+    jxl_extras_mod.addCMacro("JPEGXL_ENABLE_EXR", "0");
+    jxl_extras_mod.addCMacro("JPEGXL_ENABLE_GIF", "0");
+    jxl_extras_mod.addCMacro("JPEGXL_ENABLE_JPEG", "0");
+    jxl_extras_mod.addCMacro("JPEGXL_ENABLE_JPEGLI", "1");
+    jxl_extras_mod.addCMacro("JPEGXL_ENABLE_SKCMS", "1");
+    jxl_extras_mod.addCSourceFiles(.{
         .root = upstream.path("lib"),
         .files = extras_sources,
         .flags = cxx_flags,
     });
     // APNG codec from third_party/apngdis
-    jxl_extras.addCSourceFiles(.{
+    jxl_extras_mod.addCSourceFiles(.{
         .root = upstream.path("third_party/apngdis"),
         .files = &.{ "dec.cc", "enc.cc" },
         .flags = cxx_flags,
     });
-    jxl_extras.linkLibrary(hwy);
-    jxl_extras.linkLibrary(jpegli);
-    jxl_extras.linkLibrary(skcms);
-    jxl_extras.linkLibrary(png_dep.artifact("png"));
+    jxl_extras_mod.linkLibrary(hwy);
+    jxl_extras_mod.linkLibrary(jpegli);
+    jxl_extras_mod.linkLibrary(skcms);
+    jxl_extras_mod.linkLibrary(png_dep.artifact("png"));
 
-    // ============== Threads library ==============
-    // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jxl_lists.cmake#L240-L245
-    const jxl_threads = b.addLibrary(.{
-        .name = "jxl_threads",
+    const jxl_extras = b.addLibrary(.{
+        .name = "jxl_extras",
         .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
+        .root_module = jxl_extras_mod,
     });
-    jxl_threads.linkLibCpp();
-    jxl_threads.addIncludePath(upstream.path(""));
-    jxl_threads.addIncludePath(highway.path(""));
-    jxl_threads.root_module.addCMacro("HWY_STATIC_DEFINE", "1");
-    jxl_threads.addCSourceFiles(.{
+
+    // Threads library (internal)
+    // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jxl_lists.cmake#L240-L245
+    const jxl_threads_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    jxl_threads_mod.addIncludePath(upstream.path(""));
+    jxl_threads_mod.addIncludePath(highway.path(""));
+    jxl_threads_mod.addCMacro("HWY_STATIC_DEFINE", "1");
+    jxl_threads_mod.addCSourceFiles(.{
         .root = upstream.path("lib"),
         .files = threads_sources,
         .flags = cxx_flags,
     });
 
-    // ============== CMS library ==============
-    // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jxl_lists.cmake#L79-L89
-    const jxl_cms = b.addLibrary(.{
-        .name = "jxl_cms",
+    const jxl_threads = b.addLibrary(.{
+        .name = "jxl_threads",
         .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
+        .root_module = jxl_threads_mod,
     });
-    jxl_cms.linkLibCpp();
-    jxl_cms.addIncludePath(upstream.path(""));
-    jxl_cms.addIncludePath(highway.path(""));
-    jxl_cms.addIncludePath(b.path("skcms"));
-    jxl_cms.root_module.addCMacro("HWY_STATIC_DEFINE", "1");
-    jxl_cms.root_module.addCMacro("JPEGXL_ENABLE_SKCMS", "1");
-    jxl_cms.addCSourceFiles(.{
+
+    // CMS library (internal)
+    // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jxl_lists.cmake#L79-L89
+    const jxl_cms_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
+    });
+    jxl_cms_mod.addIncludePath(upstream.path(""));
+    jxl_cms_mod.addIncludePath(highway.path(""));
+    jxl_cms_mod.addIncludePath(b.path("skcms"));
+    jxl_cms_mod.addCMacro("HWY_STATIC_DEFINE", "1");
+    jxl_cms_mod.addCMacro("JPEGXL_ENABLE_SKCMS", "1");
+    jxl_cms_mod.addCSourceFiles(.{
         .root = upstream.path("lib"),
         .files = cms_sources,
         .flags = cxx_flags,
     });
-    jxl_cms.linkLibrary(hwy);
-    jxl_cms.linkLibrary(skcms);
+    jxl_cms_mod.linkLibrary(hwy);
+    jxl_cms_mod.linkLibrary(skcms);
+
+    const jxl_cms = b.addLibrary(.{
+        .name = "jxl_cms",
+        .linkage = .static,
+        .root_module = jxl_cms_mod,
+    });
 
     // ============== cjpegli encoder tool ==============
     // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/tools/CMakeLists.txt#L77-L79
-    const cjpegli = b.addExecutable(.{
-        .name = "cjpegli",
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
+    const cjpegli_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
     });
-    cjpegli.linkLibCpp();
-    cjpegli.addIncludePath(upstream.path(""));
-    cjpegli.addIncludePath(highway.path(""));
-    cjpegli.addIncludePath(libjpeg_turbo.path(""));
-    cjpegli.addIncludePath(b.path(""));
-    cjpegli.addIncludePath(b.path("skcms"));
-    cjpegli.addIncludePath(png_dep.path(""));
-    cjpegli.root_module.addCMacro("HWY_STATIC_DEFINE", "1");
-    cjpegli.root_module.addCMacro("JPEGXL_VERSION", "\"0.11.1\"");
-    cjpegli.root_module.addCMacro("JPEGXL_ENABLE_APNG", "1");
-    cjpegli.root_module.addCMacro("JPEGXL_ENABLE_EXR", "0");
-    cjpegli.root_module.addCMacro("JPEGXL_ENABLE_GIF", "0");
-    cjpegli.root_module.addCMacro("JPEGXL_ENABLE_JPEG", "0");
-    cjpegli.root_module.addCMacro("JPEGXL_ENABLE_JPEGLI", "1");
-    cjpegli.root_module.addCMacro("JPEGXL_ENABLE_SKCMS", "1");
-    cjpegli.addCSourceFiles(.{
+    cjpegli_mod.addIncludePath(upstream.path(""));
+    cjpegli_mod.addIncludePath(highway.path(""));
+    cjpegli_mod.addIncludePath(libjpeg_turbo.path(""));
+    cjpegli_mod.addIncludePath(b.path(""));
+    cjpegli_mod.addIncludePath(b.path("skcms"));
+    cjpegli_mod.addIncludePath(png_dep.path(""));
+    cjpegli_mod.addCMacro("HWY_STATIC_DEFINE", "1");
+    cjpegli_mod.addCMacro("JPEGXL_VERSION", "\"0.11.1\"");
+    cjpegli_mod.addCMacro("JPEGXL_ENABLE_APNG", "1");
+    cjpegli_mod.addCMacro("JPEGXL_ENABLE_EXR", "0");
+    cjpegli_mod.addCMacro("JPEGXL_ENABLE_GIF", "0");
+    cjpegli_mod.addCMacro("JPEGXL_ENABLE_JPEG", "0");
+    cjpegli_mod.addCMacro("JPEGXL_ENABLE_JPEGLI", "1");
+    cjpegli_mod.addCMacro("JPEGXL_ENABLE_SKCMS", "1");
+    cjpegli_mod.addCSourceFiles(.{
         .root = upstream.path(""),
         .files = tool_sources,
         .flags = cxx_flags,
     });
-    cjpegli.addCSourceFiles(.{
+    cjpegli_mod.addCSourceFiles(.{
         .root = upstream.path("tools"),
         .files = &.{"cjpegli.cc"},
         .flags = cxx_flags,
     });
-    cjpegli.linkLibrary(jpegli);
-    cjpegli.linkLibrary(jxl_extras);
-    cjpegli.linkLibrary(jxl_threads);
-    cjpegli.linkLibrary(jxl_cms);
-    cjpegli.linkLibrary(hwy);
-    cjpegli.linkLibrary(skcms);
-    cjpegli.linkLibrary(png_dep.artifact("png"));
+    // Link against jpegli (the public artifact) and internal libraries
+    cjpegli_mod.linkLibrary(jpegli);
+    cjpegli_mod.linkLibrary(jxl_extras);
+    cjpegli_mod.linkLibrary(jxl_threads);
+    cjpegli_mod.linkLibrary(jxl_cms);
+    cjpegli_mod.linkLibrary(hwy);
+    cjpegli_mod.linkLibrary(skcms);
+    cjpegli_mod.linkLibrary(png_dep.artifact("png"));
+
+    const cjpegli = b.addExecutable(.{
+        .name = "cjpegli",
+        .root_module = cjpegli_mod,
+    });
     b.installArtifact(cjpegli);
 
     // ============== djpegli decoder tool ==============
     // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/tools/CMakeLists.txt#L80-L82
-    const djpegli = b.addExecutable(.{
-        .name = "djpegli",
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
+    const djpegli_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .link_libcpp = true,
     });
-    djpegli.linkLibCpp();
-    djpegli.addIncludePath(upstream.path(""));
-    djpegli.addIncludePath(highway.path(""));
-    djpegli.addIncludePath(libjpeg_turbo.path(""));
-    djpegli.addIncludePath(b.path(""));
-    djpegli.addIncludePath(b.path("skcms"));
-    djpegli.addIncludePath(png_dep.path(""));
-    djpegli.root_module.addCMacro("HWY_STATIC_DEFINE", "1");
-    djpegli.root_module.addCMacro("JPEGXL_VERSION", "\"0.11.1\"");
-    djpegli.root_module.addCMacro("JPEGXL_ENABLE_APNG", "1");
-    djpegli.root_module.addCMacro("JPEGXL_ENABLE_EXR", "0");
-    djpegli.root_module.addCMacro("JPEGXL_ENABLE_GIF", "0");
-    djpegli.root_module.addCMacro("JPEGXL_ENABLE_JPEG", "0");
-    djpegli.root_module.addCMacro("JPEGXL_ENABLE_JPEGLI", "1");
-    djpegli.root_module.addCMacro("JPEGXL_ENABLE_SKCMS", "1");
-    djpegli.addCSourceFiles(.{
+    djpegli_mod.addIncludePath(upstream.path(""));
+    djpegli_mod.addIncludePath(highway.path(""));
+    djpegli_mod.addIncludePath(libjpeg_turbo.path(""));
+    djpegli_mod.addIncludePath(b.path(""));
+    djpegli_mod.addIncludePath(b.path("skcms"));
+    djpegli_mod.addIncludePath(png_dep.path(""));
+    djpegli_mod.addCMacro("HWY_STATIC_DEFINE", "1");
+    djpegli_mod.addCMacro("JPEGXL_VERSION", "\"0.11.1\"");
+    djpegli_mod.addCMacro("JPEGXL_ENABLE_APNG", "1");
+    djpegli_mod.addCMacro("JPEGXL_ENABLE_EXR", "0");
+    djpegli_mod.addCMacro("JPEGXL_ENABLE_GIF", "0");
+    djpegli_mod.addCMacro("JPEGXL_ENABLE_JPEG", "0");
+    djpegli_mod.addCMacro("JPEGXL_ENABLE_JPEGLI", "1");
+    djpegli_mod.addCMacro("JPEGXL_ENABLE_SKCMS", "1");
+    djpegli_mod.addCSourceFiles(.{
         .root = upstream.path(""),
         .files = tool_sources,
         .flags = cxx_flags,
     });
-    djpegli.addCSourceFiles(.{
+    djpegli_mod.addCSourceFiles(.{
         .root = upstream.path("tools"),
         .files = &.{"djpegli.cc"},
         .flags = cxx_flags,
     });
-    djpegli.linkLibrary(jpegli);
-    djpegli.linkLibrary(jxl_extras);
-    djpegli.linkLibrary(jxl_threads);
-    djpegli.linkLibrary(jxl_cms);
-    djpegli.linkLibrary(hwy);
-    djpegli.linkLibrary(skcms);
-    djpegli.linkLibrary(png_dep.artifact("png"));
+    // Link against jpegli (the public artifact) and internal libraries
+    djpegli_mod.linkLibrary(jpegli);
+    djpegli_mod.linkLibrary(jxl_extras);
+    djpegli_mod.linkLibrary(jxl_threads);
+    djpegli_mod.linkLibrary(jxl_cms);
+    djpegli_mod.linkLibrary(hwy);
+    djpegli_mod.linkLibrary(skcms);
+    djpegli_mod.linkLibrary(png_dep.artifact("png"));
+
+    const djpegli = b.addExecutable(.{
+        .name = "djpegli",
+        .root_module = djpegli_mod,
+    });
     b.installArtifact(djpegli);
 }
 
