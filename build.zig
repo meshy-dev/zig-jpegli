@@ -63,9 +63,8 @@ pub fn build(b: *std.Build) void {
     hwy.root_module.addCMacro("HWY_STATIC_DEFINE", "1");
 
     // ============== skcms color management library ==============
-    // Original: https://skia.googlesource.com/skcms/+/bf2d52b98a420c59d991ced59fef8b4243b7dc13
+    // Vendored via git subtree from: https://skia.googlesource.com/skcms/+/bf2d52b98a420c59d991ced59fef8b4243b7dc13
     // Source list: https://skia.googlesource.com/skcms/+/bf2d52b98a420c59d991ced59fef8b4243b7dc13/BUILD.bazel#11
-    // Bundled because zig fetch doesn't support googlesource.com protocol
     const skcms = b.addLibrary(.{
         .name = "skcms",
         .linkage = .static,
