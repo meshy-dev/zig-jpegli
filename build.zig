@@ -90,19 +90,13 @@ pub fn build(b: *std.Build) void {
     // Install only the jpegli library
     b.installArtifact(jpegli);
 
-    // Install libjpeg-compatible headers (for libjpeg API compatibility)
+    // Install libjpeg-compatible headers
+    // The library exports jpeg_* functions via libjpeg_wrapper.cc
     // Source: https://github.com/google/jpegli/blob/bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a/lib/jpegli.cmake#L72-L77
     jpegli.installHeader(b.path("jconfig.h"), "jconfig.h");
     jpegli.installHeader(libjpeg_turbo.path("jpeglib.h"), "jpeglib.h");
     jpegli.installHeader(libjpeg_turbo.path("jmorecfg.h"), "jmorecfg.h");
     jpegli.installHeader(libjpeg_turbo.path("jerror.h"), "jerror.h");
-
-    // Install jpegli-specific headers (for direct jpegli API usage)
-    // Headers use "lib/jpegli/..." includes internally, so install with that prefix
-    jpegli.installHeader(upstream.path("lib/jpegli/common.h"), "lib/jpegli/common.h");
-    jpegli.installHeader(upstream.path("lib/jpegli/decode.h"), "lib/jpegli/decode.h");
-    jpegli.installHeader(upstream.path("lib/jpegli/encode.h"), "lib/jpegli/encode.h");
-    jpegli.installHeader(upstream.path("lib/jpegli/types.h"), "lib/jpegli/types.h");
 
     // ============== CLI tool internal libraries (not installed) ==============
 
@@ -356,6 +350,8 @@ const jpegli_sources: []const []const u8 = &.{
     "jpegli/simd.cc",
     "jpegli/source_manager.cc",
     "jpegli/upsample.cc",
+    // libjpeg API wrapper - provides jpeg_* functions that call jpegli_* internally
+    "jpegli/libjpeg_wrapper.cc",
 };
 
 // Extras library sources (JPEGXL_INTERNAL_EXTRAS_SOURCES + codecs)
