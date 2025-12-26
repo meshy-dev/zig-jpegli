@@ -98,10 +98,11 @@ pub fn build(b: *std.Build) void {
     jpegli.installHeader(libjpeg_turbo.path("jerror.h"), "jerror.h");
 
     // Install jpegli-specific headers (for direct jpegli API usage)
-    jpegli.installHeader(upstream.path("lib/jpegli/common.h"), "jpegli/common.h");
-    jpegli.installHeader(upstream.path("lib/jpegli/decode.h"), "jpegli/decode.h");
-    jpegli.installHeader(upstream.path("lib/jpegli/encode.h"), "jpegli/encode.h");
-    jpegli.installHeader(upstream.path("lib/jpegli/types.h"), "jpegli/types.h");
+    // Headers use "lib/jpegli/..." includes internally, so install with that prefix
+    jpegli.installHeader(upstream.path("lib/jpegli/common.h"), "lib/jpegli/common.h");
+    jpegli.installHeader(upstream.path("lib/jpegli/decode.h"), "lib/jpegli/decode.h");
+    jpegli.installHeader(upstream.path("lib/jpegli/encode.h"), "lib/jpegli/encode.h");
+    jpegli.installHeader(upstream.path("lib/jpegli/types.h"), "lib/jpegli/types.h");
 
     // ============== CLI tool internal libraries (not installed) ==============
 
