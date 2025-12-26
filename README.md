@@ -2,7 +2,7 @@
 
 Zig build system for [Google's jpegli](https://github.com/google/jpegli) - a high-quality JPEG encoder/decoder library that is API-compatible with libjpeg.
 
-> NOTE: This project is heavily AI / LLM driven. Please take the time, read and verify the build.zig file to ensure correctness yourself.
+> NOTE: This conversion process of original CMake to zig build is heavily AI / LLM driven (This wouldn't be possible for me without help of AI assistance). Please take the time, read and verify the build.zig file to ensure correctness yourself.
 
 ## Features
 
