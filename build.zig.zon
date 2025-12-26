@@ -7,6 +7,8 @@
         "build.zig",
         "build.zig.zon",
         "jconfig.h",
+        "README.md",
+        "LICENSE.md",
         // skcms vendored via: git subtree add --prefix=skcms https://skia.googlesource.com/skcms bf2d52b98a420c59d991ced59fef8b4243b7dc13 --squash
         // Update via: git subtree pull --prefix=skcms https://skia.googlesource.com/skcms <new-commit> --squash
         "skcms",
