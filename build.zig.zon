@@ -1,0 +1,32 @@
+.{
+    .name = .jpegli,
+    .version = "0.11.1",
+    .minimum_zig_version = "0.15.0",
+    .fingerprint = 0x5d394a9371f4dcf5,
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "jconfig.h",
+        // skcms is bundled because skia.googlesource.com doesn't work with zig fetch
+        // Original source: https://skia.googlesource.com/skcms (commit bf2d52b98a420c59d991ced59fef8b4243b7dc13)
+        "skcms",
+    },
+    .dependencies = .{
+        .jpegli = .{
+            .url = "git+https://github.com/google/jpegli.git#bc19ca2393f79bfe0a4a9518f77e4ad33ce1ab7a",
+            .hash = "N-V-__8AAH4xJACSHCOtjq7_mMwjmtqvSbVERwt3iED-zDLM",
+        },
+        .highway = .{
+            .url = "git+https://github.com/google/highway.git#457c891775a7397bdb0376bb1031e6e027af1c48",
+            .hash = "N-V-__8AAODLaQBqNvEIfh_2K_DEv5Ivn1EgOsrbhetLQpvS",
+        },
+        .libjpeg_turbo = .{
+            .url = "git+https://github.com/libjpeg-turbo/libjpeg-turbo.git#8ecba3647edb6dd940463fedf38ca33a8e2a73d1",
+            .hash = "N-V-__8AAFSUgADpLNS5Jc5gFiYjpPaIw5yO7iJy-x1cErJf",
+        },
+        .libpng = .{
+            .url = "git+https://github.com/allyourcodebase/libpng.git#4783adcb3b8ed0e3d5032a3434059be594755f57",
+            .hash = "libpng-1.6.53-oiaFGtwqAAB2XTxMgi4dG96BUO-0_BtUFtxKraIwq6-w",
+        },
+    },
+}
